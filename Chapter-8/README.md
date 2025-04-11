@@ -1,96 +1,126 @@
-# Commands for Monitoring a Linux Server
 
-## Top Command
+# Keep a Health Check on Your Ubuntu Server
 
-The `top` command is used to print out the current state of your server. It displays resource usage and identifies which processes are consuming the most resources.
+## Table of Contents
+- [Basic Monitoring Commands](#basic-monitoring-commands)
+- [Cockpit Installation and Access](#cockpit-installation-and-access)
+- [Install and Configure Grafana](#install-and-configure-grafana)
+- [Install and Configure Prometheus](#install-and-configure-prometheus)
+- [Install Node Exporter](#install-node-exporter)
+- [Integrate Node Exporter with Prometheus](#integrate-node-exporter-with-prometheus)
+- [Log Monitoring with Filebeat and Kibana](#log-monitoring-with-filebeat-and-kibana)
+- [Install and Configure Fail2Ban](#install-and-configure-fail2ban)
+- [OSSEC: Host Intrusion Detection System](#ossec-host-intrusion-detection-system)
+- [Forward OSSEC Logs to Elasticsearch](#forward-ossec-logs-to-elasticsearch)
+
+---
+
+## Basic Monitoring Commands
+
+### `top`
+
+Displays live information about CPU, memory usage, running processes, and more.
 
 ```bash
 top
 ```
 
-## Netstat Command
+---
 
-The `netstat` command shows the active connections on your server. You can use various arguments with it, and the following command is one of the common usages:
+### `netstat`
+
+Shows active network connections, ports, and associated processes.
 
 ```bash
 netstat -anp
 ```
 
-## LSOF Command
+---
 
-The `lsof` command shows the files that are currently being used on the system.
+### `lsof`
+
+Lists open files and the processes that opened them.
 
 ```bash
 lsof
 ```
 
-## DU Command
+---
 
-The `du` command helps you find the size of folders. It’s useful when your server runs out of disk space.
+### `du`
+
+Helps determine folder sizes—great for disk usage troubleshooting.
 
 ```bash
 du -h --max-depth=1
 ```
 
-## Install Cockpit Command
+---
 
-Cockpit is a web-based tool for monitoring and administrating an Ubuntu server. Install it using the following command:
+## Cockpit Installation and Access
+
+### Install Cockpit
+
+Cockpit is a lightweight web-based UI for monitoring and managing servers.
 
 ```bash
 sudo apt install -t ${VERSION_CODENAME}-backports cockpit
 ```
 
-## Access Cockpit WebGUI
+### Access the Web GUI
 
-After installation, access the Cockpit WebGUI by navigating to:
+Open your browser and navigate to:
 
 ```
-https://IP:9090
+https://<SERVER-IP>:9090
 ```
 
-## Install Grafana Commands
+---
 
-Grafana is a tool used for visualizing data. To install Grafana on your Ubuntu server, run the following commands:
+## Install and Configure Grafana
+
+Grafana is a visualization tool for monitoring system and application metrics.
+
+### Installation Steps
 
 ```bash
-# Adding Grafana key
+# Add Grafana GPG key
 sudo wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
 
-# Adding Grafana repositories
-echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+# Add Grafana repository
+echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
 
-# Updating the repositories
-apt update
-
-# Install Grafana
-apt install grafana
+# Update and install
+sudo apt update
+sudo apt install grafana
 ```
 
-## Restart Grafana Server
-
-If Grafana is already installed, restart the service using the following command:
+### Restart Grafana Service
 
 ```bash
-systemctl restart grafana-server
+sudo systemctl restart grafana-server
 ```
 
-## Install Prometheus Commands
+---
 
-Prometheus is a tool to collect and store metrics. To install Prometheus on your server, follow these commands:
+## Install and Configure Prometheus
+
+Prometheus collects metrics from various sources.
+
+### Setup Steps
 
 ```bash
-# Adding user and group for Prometheus
+# Create Prometheus user and group
 sudo groupadd --system prometheus
 sudo useradd -s /sbin/nologin --system -g prometheus prometheus
 
-# Creating necessary directories
-sudo mkdir /var/lib/prometheus
-sudo mkdir /etc/prometheus/
-sudo mkdir /etc/prometheus/rules
-sudo mkdir /etc/prometheus/rules.d
-sudo mkdir /etc/prometheus/files_sd
+# Create directories
+sudo mkdir -p /var/lib/prometheus /etc/prometheus/{rules,rules.d,files_sd}
+```
 
-# Download and install Prometheus
+### Download and Install Prometheus
+
+```bash
 cd /tmp
 curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | grep browser_download_url | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -
 tar xvf prometheus*.tar.gz
@@ -100,12 +130,10 @@ sudo mv prometheus.yml /etc/prometheus/prometheus.yml
 sudo mv consoles/ console_libraries/ /etc/prometheus/
 ```
 
-## Create Prometheus Systemd Service File
-
-Create a systemd service file for Prometheus:
+### Create Prometheus systemd Service
 
 ```bash
-sudo tee /etc/systemd/system/prometheus.service<<EOF
+sudo tee /etc/systemd/system/prometheus.service <<EOF
 [Unit]
 Description=Prometheus
 Documentation=https://prometheus.io/docs/introduction/overview/
@@ -122,8 +150,7 @@ ExecStart=/usr/local/bin/prometheus \
   --storage.tsdb.path=/var/lib/prometheus \
   --web.console.templates=/etc/prometheus/consoles \
   --web.console.libraries=/etc/prometheus/console_libraries \
-  --web.listen-address=0.0.0.0:9090 \
-  --web.external-url=
+  --web.listen-address=0.0.0.0:9090
 
 SyslogIdentifier=prometheus
 Restart=always
@@ -133,9 +160,7 @@ WantedBy=multi-user.target
 EOF
 ```
 
-## Set Permissions for Prometheus
-
-Set the correct permissions for the Prometheus directories:
+### Set Directory Permissions
 
 ```bash
 for i in rules rules.d files_sd; do sudo chown -R prometheus:prometheus /etc/prometheus/${i}; done
@@ -143,9 +168,7 @@ for i in rules rules.d files_sd; do sudo chmod -R 775 /etc/prometheus/${i}; done
 sudo chown -R prometheus:prometheus /var/lib/prometheus/
 ```
 
-## Enable and Start Prometheus
-
-Enable and start the Prometheus service:
+### Enable and Start Prometheus
 
 ```bash
 sudo systemctl daemon-reload
@@ -153,44 +176,37 @@ sudo systemctl start prometheus
 sudo systemctl enable prometheus
 ```
 
-## Stop Cockpit Service (Optional)
-
-If Prometheus is running on the same port as Cockpit (9090), stop the Cockpit service with the following commands:
+### Optional: Stop Cockpit if Port Conflict
 
 ```bash
-systemctl stop cockpit.socket
-systemctl disable cockpit.socket
+sudo systemctl stop cockpit.socket
+sudo systemctl disable cockpit.socket
 ```
 
-## Install Node Exporter Commands
+---
 
-Node Exporter is a tool used to expose Linux server metrics to Prometheus. To install Node Exporter, run the following commands:
+## Install Node Exporter
+
+Node Exporter exposes OS-level metrics for Prometheus.
+
+### Installation Steps
 
 ```bash
-# Download and unpack Node Exporter
-https://github.com/prometheus/node_exporter/releases/download/v1.6.0/node_exporter-1.6.0.linux-amd64.tar.gz
+# Download and extract
+wget https://github.com/prometheus/node_exporter/releases/download/v1.6.0/node_exporter-1.6.0.linux-amd64.tar.gz
 tar zxvf node_exporter-1.6.0.linux-amd64.tar.gz
-
-# Copy Node Exporter to /usr/local/bin
 cd node_exporter-1.6.0.linux-amd64
 sudo cp node_exporter /usr/local/bin
 
-# Create a user for Node Exporter and set permissions
+# Create user and set permissions
 sudo useradd --no-create-home --shell /bin/false node_exporter
 sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
 ```
 
-## Create Node Exporter Systemd Service File
-
-Create a systemd service file for Node Exporter:
+### Create systemd Service File
 
 ```bash
-sudo nano /etc/systemd/system/node_exporter.service
-```
-
-Add the following content:
-
-```bash
+sudo tee /etc/systemd/system/node_exporter.service <<EOF
 [Unit]
 Description=Node Exporter
 Wants=network-online.target
@@ -204,169 +220,188 @@ ExecStart=/usr/local/bin/node_exporter
 
 [Install]
 WantedBy=multi-user.target
+EOF
 ```
 
-## Enable and Start Node Exporter
-
-Enable and start the Node Exporter service:
+### Enable and Start Node Exporter
 
 ```bash
-systemctl daemon-reload
-systemctl start node_exporter
-systemctl enable node_exporter
+sudo systemctl daemon-reload
+sudo systemctl start node_exporter
+sudo systemctl enable node_exporter
 ```
 
-## Test Node Exporter
-
-Test if Node Exporter is exposing data:
+### Test Node Exporter Output
 
 ```bash
-curl -v http://127.0.0.1:9100/metrics
+curl http://127.0.0.1:9100/metrics
 ```
 
-## Modify Prometheus Config for Node Exporter
+---
 
-To scrape data from the Node Exporter, modify the Prometheus config:
+## Integrate Node Exporter with Prometheus
 
-```bash
-vi /etc/prometheus/prometheus.yml
+### Update Prometheus Configuration
 
-# Add the following scraper configuration
+Edit `/etc/prometheus/prometheus.yml`:
+
+```yaml
 - job_name: "g1"
   static_configs:
     - targets: ["localhost:9100"]
 ```
 
-## Restart Prometheus
-
-Restart the Prometheus service to apply changes:
+### Restart Prometheus
 
 ```bash
-systemctl restart prometheus
+sudo systemctl restart prometheus
 ```
 
-## Install Filebeat for Log Collection
+---
 
-To collect logs with Filebeat and send them to Elasticsearch, run the following command:
+## Log Monitoring with Filebeat and Kibana
+
+### Install Filebeat
+
+```bash
+sudo apt install filebeat
+```
+
+### Run Initial Setup
 
 ```bash
 filebeat setup -e
 ```
 
-## Start Filebeat
-
-Start the Filebeat service:
+### Start Filebeat
 
 ```bash
-systemctl restart filebeat
-``` 
-
-## 1. Filebeat & Kibana Setup
-
-### Create a new view in Kibana:
-1. Go to `Stack Management | Data View` in Kibana.
-2. Create a new view.
-
-### Search for logs in Kibana:
-- Search for `error` in your stack.
-
-## 2. Install and Configure Fail2Ban
-
-### Install Fail2Ban:
-```bash
-apt install fail2ban
+sudo systemctl restart filebeat
 ```
 
-### Enable and start Fail2Ban:
+### Create a View in Kibana
+
+1. Open **Kibana** → **Stack Management** → **Data Views**.
+2. Create a new view to visualize logs.
+
+---
+
+## Install and Configure Fail2Ban
+
+Fail2Ban protects your server against brute-force attacks.
+
+### Install Fail2Ban
+
 ```bash
-systemctl enable fail2ban
-systemctl start fail2ban
+sudo apt install fail2ban
 ```
 
-### Configure Fail2Ban:
-1. Copy the `jail.conf` to `jail.local`:
-   ```bash
-   cp jail.conf jail.local
-   ```
-2. Edit the `backend` in `jail.local` to use `systemd`:
-   ```bash
-   backend = systemd
-   ```
+### Enable and Start Service
 
-### Restart Fail2Ban and tail the logs:
 ```bash
-systemctl restart fail2ban
+sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
+```
+
+### Configure Fail2Ban
+
+```bash
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+sudo nano /etc/fail2ban/jail.local
+```
+
+Set the following:
+
+```ini
+backend = systemd
+```
+
+### Restart and Monitor Logs
+
+```bash
+sudo systemctl restart fail2ban
 tail -f /var/log/fail2ban.log
 ```
 
-### Log in using a wrong password (client machine) to test blocking:
-- After a failed login, the client's IP will be blocked.
+---
 
-## 3. Setting Up OSSEC (Host Intrusion Detection System)
+## OSSEC: Host Intrusion Detection System
 
-### Install necessary dependencies for OSSEC:
+### Install Dependencies
+
 ```bash
-apt-get install build-essential make zlib1g-dev libpcre2-dev libevent-dev libssl-dev libsystemd-dev
+sudo apt-get install build-essential make zlib1g-dev libpcre2-dev libevent-dev libssl-dev libsystemd-dev
 ```
 
-### Download and install OSSEC:
+### Download and Install OSSEC
+
 ```bash
 cd /opt
-mkdir ossec
-cd ossec
+mkdir ossec && cd ossec
 wget https://github.com/ossec/ossec-hids/archive/3.7.0.tar.gz
 tar -zxvf 3.7.0.tar.gz
 cd ossec-hids-3.7.0/
 ./install.sh
 ```
 
-### Select "local" for the installation type and follow the prompts to configure OSSEC.
+> Choose **local** mode and follow prompts.
 
-### Install OSSEC using apt (for agent or server):
-- To install the server:
-  ```bash
-  sudo apt-get install ossec-hids-server
-  ```
-- To install the agent:
-  ```bash
-  #sudo apt-get install ossec-hids-agent
-  ```
+### OSSEC via apt (Optional)
 
-### Restart the OSSEC server:
 ```bash
-root@g1:/var/ossec/bin# ./ossec-control restart
+# Server:
+sudo apt install ossec-hids-server
+
+# Agent (optional):
+# sudo apt install ossec-hids-agent
 ```
 
-### List all connected agents:
+### Restart OSSEC
+
 ```bash
-root@g1:/var/ossec/bin# ./agent_control -l
+/var/ossec/bin/ossec-control restart
 ```
 
-## 4. Send OSSEC Logs to Elasticsearch using Filebeat
+### List Agents
 
-### Set OSSEC server to log in JSON format:
-1. In `/var/ossec/etc/ossec.conf`, add the following:
-   ```xml
-   <global>
-     <jsonout_output>yes</jsonout_output>
-   </global>
-   ```
-
-### Restart OSSEC server:
 ```bash
-# Restart OSSEC to activate JSON logging.
+/var/ossec/bin/agent_control -l
 ```
 
-### Configure Filebeat to send OSSEC logs to Elasticsearch:
-1. Edit Filebeat config file and add:
-   ```yaml
-   input_type: log
-   paths:
-     - /var/ossec/logs/alerts/alerts.json
-   json.keys_under_root: true
-   fields: {log_type: osseclogs}
-   ```
+---
+
+## Forward OSSEC Logs to Elasticsearch
+
+### Enable JSON Logging
+
+Edit `/var/ossec/etc/ossec.conf`:
+
+```xml
+<global>
+  <jsonout_output>yes</jsonout_output>
+</global>
 ```
 
-This markdown structure organizes all the commands and instructions as per your original text for easier readability and use.
+### Restart OSSEC
+
+```bash
+/var/ossec/bin/ossec-control restart
+```
+
+### Configure Filebeat for OSSEC Logs
+
+Edit Filebeat configuration:
+
+```yaml
+- type: log
+  paths:
+    - /var/ossec/logs/
+
+alerts/alerts.json
+  json.keys_under_root: true
+  fields:
+    log_type: osseclogs
+```
+
+---
 

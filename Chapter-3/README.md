@@ -1,221 +1,243 @@
-# i3 Window Manager Installation and Configuration
 
-Below are the commands and steps to install, configure, and use the i3 Window Manager on Ubuntu. This guide covers installation, screen configuration, setting up multiple monitors, and some extra useful commands.
+# Environments and Window Managers
+
+This section covers the installation, configuration, and usage of the **i3 Window Manager** on Ubuntu. You'll learn how to set up i3, configure multiple monitors, customize shortcuts, set backgrounds, manage workspaces, and more.
+
+---
 
 ## Install i3 Window Manager
 
-To install i3 on Ubuntu, open a terminal and run the following command:
+To install i3, open a terminal and run:
 
 ```bash
 sudo apt install i3
 ```
 
-This command installs i3 Window Manager along with essential tools. After installation, log out from your current session, select i3 as the window manager, and log in again.
+After installation:
+
+1. Log out of your current session.
+2. On the login screen, click the gear icon.
+3. Select **i3** as the window manager.
+4. Log in again.
+
+---
 
 ## Basic i3 Usage
 
-### Open Firefox or Brave
+### Launch Applications
 
-To open Firefox or Brave in i3, press `Win + d` (Windows key + d), type the name of the browser (e.g., Firefox), and press Enter. The window will tile beside the terminal, as i3 is a tiling window manager.
+- **Application Launcher**: Press `Win + d`, type the app name (e.g., `firefox`, `brave`), and press `Enter`.
+- **New Terminal**: Press `Win + Enter` to open a new terminal.
 
-### Open a New Terminal
+*i3 is a tiling window manager, so new windows will auto-tile by default.*
 
-To open a new terminal window, press `Win + ↵` (Windows key + Enter).
+---
 
 ## Screen Configuration for i3
 
-If you're using multiple screens or need to adjust screen settings, follow these steps:
+To configure DPI and cursor size, especially for high-resolution screens:
 
-1. Navigate to the `.config` directory:
+1. Navigate to your config directory:
+   ```bash
+   cd ~/.config
+   ```
 
-    ```bash
-    cd .config
-    ```
+2. Create or edit the `.XResources` file:
+   ```bash
+   nano .XResources
+   ```
 
-2. Create the `.XResources` file (note the `.` at the beginning):
+3. Add the following:
+   ```bash
+   Xft.dpi: 220
+   Xcursor.size: 30
+   ```
 
-    ```bash
-    nano .XResources
-    ```
+4. Apply the configuration:
+   ```bash
+   xrdb ~/.XResources
+   ```
 
-3. Add the following settings:
+5. Reload i3:
+   ```text
+   Win + Shift + r
+   ```
 
-    ```bash
-    Xft.dpi: 220
-    Xcursor*size: 30
-    Xcursor.size: 30
-    ```
+> These values work well on 4K displays (e.g., Dell XPS), but adjust as needed for your screen.
 
-4. Apply the values by running:
+---
 
-    ```bash
-    xrdb .XResources
-    ```
+## Screen Resolution and Multi-Monitor Setup
 
-5. Reload the window manager with the following key combination:  
-    `Win + ⇧ Shift + r` (Windows key + Shift + r).
+Use `xrandr` to configure monitors:
 
-The settings above work for a Dell XPS with a 4k screen but may need to be adjusted for different screen resolutions.
+1. Check connected displays:
+   ```bash
+   xrandr
+   ```
 
-## Screen Resolution and Multi-Screen Setup
+2. Enable a screen:
+   ```bash
+   xrandr --output <screen_name> --auto
+   ```
 
-If you need to change the screen resolution or set up additional screens, use the following commands.
+3. Set resolution and screen position:
+   ```bash
+   xrandr --output <screen1> --mode 3840x2160 --right-of <screen2>
+   ```
 
-1. To check your connected screens:
+4. Disable an external screen:
+   ```bash
+   xrandr --output eDP-1 --auto --output DP-1 --off
+   ```
 
-    ```bash
-    xrandr
-    ```
+---
 
-2. To set the output of the screen to auto (replace `<enter_screen_name>` with the actual screen name):
+### Multi-Monitor Setup Scripts
 
-    ```bash
-    xrandr --output <enter_screen_name> --auto
-    ```
+Create reusable scripts in `~/.config`.
 
-3. To set the resolution of the screen (replace `<enter_screen_name>` with the actual screen name):
-
-    ```bash
-    xrandr --output <enter_screen_name> --mode 3840x2160 --right-of <enter_screen_name>
-    ```
-
-4. To turn off the external screen:
-
-    ```bash
-    xrandr --output eDP-1 --auto --output DP-1 --off
-    ```
-
-### Create Scripts for Multi-Screen Setup
-
-#### Only Laptop Screen Script
+**Laptop Only:**
 
 ```bash
 #!/bin/bash
 xrandr --output eDP-1 --auto --output DP-1 --off
 ```
 
-#### Office Setup Script
+**Office Setup:**
 
 ```bash
 #!/bin/bash
 xrandr --output DP-2 --mode 3840x2160 --right-of eDP-1
 ```
 
-Add these scripts to your `.config` folder and save them with meaningful names.
-
-### Save i3 Settings on Boot
-
-To ensure your settings are applied when i3 starts, add the following line to your i3 configuration file:
-
+Make scripts executable:
 ```bash
-exec --no-startup-id xrdb ~/.config/.XResources
+chmod +x ~/.config/office-setup.sh
 ```
 
-## Extra Commands for i3 Configuration
+---
 
-Below are some extra useful commands for managing audio and taking screenshots.
+### Auto-Apply DPI Settings on Startup
 
-### Open Sound Control (Pavucontrol)
+Add to your i3 config file (`~/.config/i3/config`):
 
-To open the sound control panel, use the following command:
+```bash
+exec --no-startup-id xrdb ~/.XResources
+```
+
+---
+
+## Extra i3 Configuration
+
+### Sound Control Panel (Pavucontrol)
+
+Install and bind sound settings:
+
+```bash
+sudo apt install pavucontrol
+```
+
+Add to i3 config:
 
 ```bash
 bindsym $mod+XF86AudioMute exec pavucontrol
 ```
 
-### Take Screenshots
+### Screenshot Keybindings
 
-To take a screenshot using the `gnome-screenshot` tool, add the following commands to your i3 configuration file:
+Install the screenshot tool:
+
+```bash
+sudo apt install gnome-screenshot
+```
+
+Add to i3 config:
 
 ```bash
 bindsym Print exec gnome-screenshot
 bindsym Control+Print exec gnome-screenshot -i
 ```
 
-This will allow you to capture the screen or selected area using the Print key.
-
 ---
 
-# Custom Shortcuts and Configuration for i3
+# Custom Shortcuts and Settings
 
-Here are the commands and steps to customize shortcuts, set backgrounds, configure locking, and more on i3.
+## Edit i3 Config File
 
-## Custom Shortcuts
-
-To add custom shortcuts, open the `i3` config file in your preferred text editor:
+Open i3 config:
 
 ```bash
-gedit .config/i3/config
+gedit ~/.config/i3/config
 ```
 
 ### Change Mod Key
 
-By default, the Windows key is set as the Mod key. To change this to another key, modify the following line:
+Default is the Windows key (Mod4). To change:
 
 ```bash
-set $mod Mod4
-```
-
-For example, to use the Control key instead:
-
-```bash
+set $mod Mod4  # Windows key
+# or
 set $mod Control
 ```
 
-## Background Image
+---
 
-1. First, download an image to use as a background and save it in your `.config/background` folder.
-2. Install the necessary package to set the background:
+## Set a Background Image
 
-    ```bash
-    sudo apt-get install feh
-    ```
+1. Place the image in `~/.config/background/image.jpg`.
+2. Install `feh`:
+   ```bash
+   sudo apt install feh
+   ```
+3. Add to i3 config:
+   ```bash
+   exec --no-startup-id feh --bg-fill ~/.config/background/image.jpg
+   ```
 
-3. Add the following line at the bottom of your i3 config file to set the background:
+Reload i3 with `Mod + Shift + r`.
 
-    ```bash
-    exec --no-startup-id feh --bg-fill ~/.config/background/image.jpg
-    ```
+---
 
-4. Restart i3 by pressing `Mod + Shift + r` to apply the changes.
+## Lock Screen Setup
 
-## Lock Screen
+1. Install lock tools:
+   ```bash
+   sudo apt install xautolock i3lock
+   ```
 
-1. Install the required packages for locking the screen:
+2. Add to i3 config:
 
-    ```bash
-    sudo apt-get install xautolock i3lock
-    ```
+```bash
+# Auto-lock after 15 minutes
+exec xautolock -time 15 -locker 'i3lock -i ~/.config/background/lock.png' &
 
-2. Add these lines to your i3 config file to configure the lock screen:
+# Manual lock
+bindsym $mod+l exec i3lock -i ~/.config/background/lock.png
+```
 
-    ```bash
-    exec xautolock -time 15 -locker 'i3lock -i ~/.config/background/lock.png' &
-    bindsym $mod+l exec i3lock -i ~/.config/background/lock.png
-    ```
+---
 
-The first command ensures the screen locks after 15 minutes, showing a custom lock screen. The second command binds the lock screen to `Mod + l`.
+## Startup Applications: Network, Bluetooth
 
-3. Save and reload i3. Test the lock screen by pressing `Mod + l`.
-
-## Extra Configurations
-
-Add the following to your i3 config to start network and Bluetooth applets in the bottom bar:
+Add to i3 config:
 
 ```bash
 exec --no-startup-id nm-applet
 exec --no-startup-id blueman-applet
 ```
 
-If you do not have Bluetooth, you can remove the second line. Install the Bluetooth applet with:
+Install Bluetooth applet if needed:
 
 ```bash
-sudo apt-get install blueman
+sudo apt install blueman
 ```
 
-## Autostart Applications in Specific Workspaces
+---
 
-Set up your workspace and autostart applications by naming your workspaces:
+## Autostart Apps in Workspaces
+
+Define workspaces:
 
 ```bash
 set $ws1 "1:com"
@@ -227,26 +249,17 @@ set $ws6 "6:vm"
 set $ws7 "7:misc"
 ```
 
-Autostart applications on specific workspaces:
+Launch apps on startup:
 
 ```bash
-# Start terminal on workspace 2
 exec --no-startup-id i3-msg 'workspace 2:term; exec i3-sensible-terminal'
-
-# Start Brave browser on workspace 3
-exec i3-msg 'workspace 3:web; exec /snap/bin/brave'
-
-# Start Slack and Discord on workspace 1
-exec i3-msg 'workspace 1:com; exec /snap/bin/slack'
-exec i3-msg 'workspace 1:com; exec /snap/bin/discord'
-
-# Start VSCode on workspace 4
-exec i3-msg 'workspace 4:code; exec /snap/bin/code'
+exec --no-startup-id i3-msg 'workspace 3:web; exec /snap/bin/brave'
+exec --no-startup-id i3-msg 'workspace 1:com; exec /snap/bin/slack'
+exec --no-startup-id i3-msg 'workspace 1:com; exec /snap/bin/discord'
+exec --no-startup-id i3-msg 'workspace 4:code; exec /snap/bin/code'
 ```
 
-### Move Windows to Specific Workspaces
-
-To ensure apps open in the correct workspace, add these lines:
+Force apps to open in specific workspaces:
 
 ```bash
 for_window [class="Slack"] move to workspace 1:com
@@ -254,112 +267,111 @@ for_window [class="discord"] move to workspace 1:com
 for_window [class="Brave-browser"] move to workspace 3:web
 ```
 
-## Communication Tools
+---
 
-To install and use Slack, Teams, and Discord:
+# Communication Tools
 
-```bash
-sudo apt-get install slack
-sudo apt-get install teams
-sudo apt-get install discord
-```
-
-## Video Streaming Tools
-
-### Install VLC
+Install chat applications:
 
 ```bash
-sudo apt-get install vlc
+sudo apt install slack
+sudo apt install teams
+sudo apt install discord
 ```
 
-To stream video from an IP camera:
+---
+
+# Video and Streaming Tools
+
+## VLC for Streaming
+
+```bash
+sudo apt install vlc
+```
+
+To stream from an IP camera:
 
 ```bash
 vlc rtsp://10.100.0.90:554/s2
 ```
 
-### Install OBS Studio for Live Streaming
-
-1. Add the OBS PPA:
-
-    ```bash
-    sudo add-apt-repository ppa:obsproject/obs-studio
-    sudo apt update
-    ```
-
-2. Install OBS Studio:
-
-    ```bash
-    sudo apt install ffmpeg obs-studio
-    ```
-
-3. Start OBS Studio and configure your streaming settings.
-
-## Webcam
-
-To install the Cheese webcam app (if not installed):
+## OBS Studio for Live Streaming
 
 ```bash
-sudo apt-get install cheese
+sudo add-apt-repository ppa:obsproject/obs-studio
+sudo apt update
+sudo apt install ffmpeg obs-studio
 ```
 
-## Syncing Files
+Launch OBS and set up your scenes and streaming keys.
 
-For syncing files between Google Drive and Ubuntu, use `Odrive`:
+---
+
+## Webcam Support
+
+Install Cheese webcam viewer:
 
 ```bash
-https://flathub.org/apps/details/io.github.liberodark.OpenDrive
+sudo apt install cheese
 ```
 
-Install Dropbox:
+---
 
-```bash
-https://www.dropbox.com/install-linux
-```
+# File Syncing Tools
 
-Install Mega:
+### Google Drive (via OpenDrive)
+Install from Flathub:  
+[OpenDrive on Flathub](https://flathub.org/apps/details/io.github.liberodark.OpenDrive)
 
-```bash
-https://mega.io/desktop
-```
+### Dropbox
+Install from official site:  
+[Dropbox for Linux](https://www.dropbox.com/install-linux)
 
-For syncing files between devices, use Resilio:
+### Mega
+[MEGA Desktop App](https://mega.io/desktop)
 
-```bash
-https://www.resilio.com/
-```
+### Resilio Sync
+[Resilio Sync](https://www.resilio.com/)
 
-## Git Setup
+---
+
+# Git Setup
 
 Install Git:
 
 ```bash
-sudo apt-get install git
+sudo apt install git
 ```
 
-Generate an SSH key:
+Generate SSH key:
 
 ```bash
 ssh-keygen
 ```
 
-Add the SSH key to GitHub:
+Add your key to GitHub:
 
 ```bash
-cat .ssh/id_rsa.pub
+cat ~/.ssh/id_rsa.pub
 ```
 
-Clone a Git repository:
+Clone a repository:
 
 ```bash
 git clone https://github.com/bpbpublications/Ubuntu-Linux-in-30-days.git
 ```
 
-## Install Visual Studio Code (VSCode)
+---
 
-To install VSCode, download the `.deb` package from the official website or use the following command if you have a `.deb` file:
+# Install Visual Studio Code (VSCode)
+
+Download the `.deb` file from [Visual Studio Code](https://code.visualstudio.com/) or install via terminal:
 
 ```bash
-sudo dpkg -i <name of the file you downloaded>
+sudo dpkg -i <name-of-downloaded-file.deb>
+sudo apt --fix-broken install
 ```
 
+---
+
+```
